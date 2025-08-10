@@ -10,15 +10,17 @@ from PySide6.QtWidgets import (
     QTextEdit, QSplitter
 )
 from PySide6.QtCore import Qt, QTimer, QThread, Signal, QSize
-from PySide6.QtGui import QFont, QCloseEvent, QColor, QPalette, QIcon, QPixmap
+from PySide6.QtGui import QFont, QCloseEvent, QColor, QPalette, QIcon, QPixmap, QMouseEvent, QPainter, QLinearGradient
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 import numpy as np
 import pygame
 import time
+import os
 import threading
 from datetime import datetime
-
+from PySide6.QtWidgets import QHBoxLayout
+from PySide6.QtCore import QPoint
 
 # Inicjalizacja pygame do obsługi dźwięku
 pygame.mixer.init()
@@ -30,6 +32,7 @@ PULSE_DURATION = 0.1 # czas trwania pulsacji
 PULSE_PAUSE = 0.1 # przerwa między pulsacjami
 
 # Reusable Styles
+
 CHROME_BUTTON_STYLE = """
 QPushButton {
     background-color: qlineargradient(
@@ -132,6 +135,7 @@ QMessageBox QPushButton:pressed {
 """
 
 
+
 def convert_numpy(obj):
     """
     Konwertuje obiekty numpy (np.integer, np.floating, np.ndarray) na standardowe typy Pythona.
@@ -150,6 +154,177 @@ def convert_numpy(obj):
     else:
         return obj
 
+class CustomTitleBar(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setFixedHeight(30)
+
+        # Stylizacja obramowania (zaokrąglenia tylko góra)
+        self.setStyleSheet("""
+            QWidget {
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
+                /* Usuwamy tło w stylu, bo malujemy ręcznie */
+                background: transparent;
+            }
+        """)
+
+        # Główny layout poziomy
+        layout = QHBoxLayout(self)
+        # Marginesy: left, top, right, bottom
+        # Left - trochę na "oddech" dla napisu
+        # Right - więcej miejsca na przyciski z marginesem od krawędzi
+        layout.setContentsMargins(8, 3, 3, 3)
+        layout.setSpacing(4)  # Odstęp między widgetami (m.in. między przyciskami)
+
+        # Label z tytułem po lewej
+        self.title_label = QLabel("HB Audio Suite")
+        self.title_label.setFont(QFont("Arial", 11, QFont.Bold))
+        self.title_label.setStyleSheet("background-color: transparent; color: white;")
+        layout.addWidget(self.title_label)
+
+        layout.addStretch()  # Wypełni miejsce między tytułem a przyciskami
+
+        # Przyciski sterujące oknem
+        self.minimize_button = QPushButton()
+        self.maximize_button = QPushButton()
+        self.close_button = QPushButton()
+
+        # Ikony - ścieżka do folderu z ikonami
+        icons_dir = "icons"
+        self.minimize_button.setIcon(QIcon(os.path.join(icons_dir, "min.png")))
+        self.maximize_button.setIcon(QIcon(os.path.join(icons_dir, "max.png")))
+        self.close_button.setIcon(QIcon(os.path.join(icons_dir, "close.png")))
+
+        # Rozmiar przycisków mniejszy niż wcześniej (np. 26x26)
+        button_size = QSize(24, 24)
+
+        # Wspólne style dla min i max (z gradientem, zaokrąglone)
+        button_style = """
+            QPushButton {
+                background-color: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #5a5a5a,
+                    stop:0.499 #3f3f3f,
+                    stop:0.501 #2a2a2a,
+                    stop:1 #636363
+                );
+                color: white;
+                border: 1px solid #d0d0d0;
+                border-radius: 4px;
+                padding: 3px;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #aaaaaa,
+                    stop:0.499 #7f7f7f,
+                    stop:0.501 #4a4a4a,
+                    stop:1 #636363
+                );
+            }
+            QPushButton:pressed {
+                background-color: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #8a8a8a,
+                    stop:0.499 #5f5f5f,
+                    stop:0.501 #2a2a2a,
+                    stop:1 #434343
+                );
+            }
+        """
+
+        for btn in [self.minimize_button, self.maximize_button]:
+            btn.setFixedSize(button_size)
+            btn.setIconSize(QSize(14, 14))
+            btn.setStyleSheet(button_style)
+
+        # Specjalny styl dla przycisku zamykania (czerwony gradient)
+        close_style = """
+            QPushButton {
+                background-color: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #af0000,
+                    stop:0.499 #7c0000,
+                    stop:0.501 #4a0000,
+                    stop:1 #bf0000
+                );
+                color: white;
+                border: 1px solid #d0d0d0;
+                border-radius: 4px;
+                padding: 3px;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #df0000,
+                    stop:0.499 #ac0000,
+                    stop:0.501 #8a0000,
+                    stop:1 #ef0000
+                );
+            }
+            QPushButton:pressed {
+                background-color: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #7f0000,
+                    stop:0.499 #5c0000,
+                    stop:0.501 #2a0000,
+                    stop:1 #8f0000
+                );
+            }
+        """
+
+        self.close_button.setFixedSize(button_size)
+        self.close_button.setIconSize(QSize(14, 14))
+        self.close_button.setStyleSheet(close_style)
+
+        # Dodajemy przyciski do layoutu (będą po prawej dzięki stretch)
+        layout.addWidget(self.minimize_button)
+        layout.addWidget(self.maximize_button)
+        layout.addWidget(self.close_button)
+
+        # Podłączenie sygnałów do okna nadrzędnego
+        self.minimize_button.clicked.connect(self.parent_window.showMinimized)
+        self.maximize_button.clicked.connect(self.toggle_maximize_restore)
+        self.close_button.clicked.connect(self.parent_window.close)
+
+        self._start_pos = None
+
+    def toggle_maximize_restore(self):
+        if self.parent_window.isMaximized():
+            self.parent_window.showNormal()
+            self.maximize_button.setIcon(QIcon(os.path.join("icons", "max.png")))
+        else:
+            self.parent_window.showMaximized()
+            self.maximize_button.setIcon(QIcon(os.path.join("icons", "restore.png")))
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.LeftButton:
+            self._start_pos = event.globalPos()
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if self._start_pos and event.buttons() == Qt.LeftButton:
+            delta = event.globalPos() - self._start_pos
+            self.parent_window.move(self.parent_window.pos() + delta)
+            self._start_pos = event.globalPos()
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        self._start_pos = None
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        gradient = QLinearGradient(0, 0, 0, self.height())  # gradient pionowy
+        gradient.setColorAt(0, QColor("#8B8B8B"))
+        gradient.setColorAt(0.499, QColor("#696969"))
+        gradient.setColorAt(0.501, QColor("#424242"))
+        gradient.setColorAt(1, QColor("#757575"))
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setBrush(gradient)
+        painter.setPen(Qt.NoPen)
+
+        rect = self.rect()
+        painter.drawRoundedRect(rect, 0, 0)  # większe zaokrąglenie dla ładniejszego efektu
 
 class AudiometryWorker(QThread):
     """
@@ -461,7 +636,7 @@ class AddPatientDialog(QDialog):
         self.setWindowTitle("Dodaj nowego pacjenta")
         self.setFixedSize(400, 450)
         self.set_dark_mode()
-
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         self.layout = QFormLayout(self)
         
         self.name_input = QLineEdit()
@@ -477,7 +652,7 @@ class AddPatientDialog(QDialog):
         self.id_input.setStyleSheet(CHROME_TEXTBOX_STYLE)
         self.pesel_input.setStyleSheet(CHROME_TEXTBOX_STYLE)
         self.notes_input.setStyleSheet(CHROME_TEXTBOX_STYLE)
-
+        
         self.gender_combo = QComboBox()
         self.gender_combo.addItems(["Mężczyzna", "Kobieta", "Inne"])
         self.gender_combo.setStyleSheet(
@@ -547,7 +722,7 @@ class PatientDetailsDialog(QDialog):
         self.setWindowTitle(f"Szczegóły pacjenta: {patient_data['name']} {patient_data['surname']}")
         self.resize(500, 500)
         self.set_dark_mode()
-        
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         self.patient_data = patient_data
         self.database = database
         
@@ -621,7 +796,7 @@ class ShowResultDialog(QDialog):
         self.setWindowTitle(f"Wyniki testu dla {patient_data['name']} {patient_data['surname']}")
         self.resize(800, 500)
         self.set_dark_mode()
-
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         layout = QVBoxLayout(self)
 
         # Używamy jednego wykresu dla obu uszu
@@ -709,26 +884,28 @@ class AudiometryApp(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("HB Audio Suite")
-        self.setGeometry(100, 100, 1600, 1200)
-        
-        self.set_dark_mode()
+        # self.setWindowTitle("HB Audio Suite") # No longer needed with custom title bar
+        self.setGeometry(100, 100, 1600, 1225)
 
+        # Set frameless window hint before creating the layout
+        self.setWindowFlags(Qt.FramelessWindowHint)
+
+        self.set_dark_mode()
         self.database = PatientDatabase()
         self.current_patient = None
         self.patient_tests = []
-
         self.worker_thread = None
-        self.results = {'left': {}, 'right': {}} # Inicjalizacja wyników
+        self.results = {'left': {}, 'right': {}}
 
         self.create_widgets()
         self.setup_connections()
         self.update_patient_list()
-        
-        # Przyciski początkowo wyłączone
+
+        # ... (disable buttons logic) ...
         self.start_button.setEnabled(False)
         self.delete_patient_button.setEnabled(False)
         self.patient_details_button.setEnabled(False)
+
 
     def set_dark_mode(self):
         """Ustawia ciemny motyw dla całej aplikacji."""
@@ -753,10 +930,21 @@ class AudiometryApp(QMainWindow):
         
     def create_widgets(self):
         """Tworzy wszystkie elementy interfejsu użytkownika."""
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
-        main_layout = QHBoxLayout(central_widget)
+        # Main layout for the entire window
+        main_container = QWidget()
+        self.setCentralWidget(main_container)
+        main_layout = QVBoxLayout(main_container)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # Add the custom title bar at the top
+        self.title_bar = CustomTitleBar(self)
+        main_layout.addWidget(self.title_bar)
+
+        # The rest of your existing application content
+        app_content = QWidget()
+        app_content_layout = QHBoxLayout(app_content)
+        main_layout.addWidget(app_content)
         
         # Lewy panel - baza pacjentów i historia testów
         left_panel = QSplitter(Qt.Vertical)
@@ -842,15 +1030,15 @@ class AudiometryApp(QMainWindow):
 
         left_panel.addWidget(patient_panel)
         left_panel.addWidget(history_panel)
-        left_panel.setSizes([350, 350]) # Ustawienie proporcji paneli
-
+        left_panel.setSizes([350, 350])
+        
 
         # Styl dla przycisków
         add_patient_button.setStyleSheet(CHROME_BUTTON_STYLE)
         self.delete_patient_button.setStyleSheet(CHROME_BUTTON_STYLE)
         self.patient_details_button.setStyleSheet(CHROME_BUTTON_STYLE)
 
-        main_layout.addWidget(left_panel)
+        app_content_layout.addWidget(left_panel) # Use app_content_layout here
         
         # Prawy panel - audiometria
         audiometry_panel = QFrame()
@@ -991,7 +1179,7 @@ class AudiometryApp(QMainWindow):
         
         audiometry_layout.addWidget(control_frame)
 
-        main_layout.addWidget(audiometry_panel)
+        app_content_layout.addWidget(audiometry_panel)
         
         # Pasek statusu
         self.status_bar = QStatusBar()
