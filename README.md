@@ -17,9 +17,11 @@ but why?
 because its cool.
 
 <img width="287" height="606" alt="image of how chrome" src="https://github.com/user-attachments/assets/15f3d083-3640-4927-b1b0-00e9d610ea1c" />
+<br>
 the buttons are chrome styled. the text boxes have gradients. the list has a gradient too.
 
 <img width="771" height="94" alt="image" src="https://github.com/user-attachments/assets/bd6f3895-acc1-4524-b9da-8bd207b79840" />
+<br>
 the signal settings are very similar too!
 
 enjoy the stupid thing.
