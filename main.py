@@ -20,7 +20,6 @@ import os
 import threading
 from datetime import datetime
 from PySide6.QtWidgets import QHBoxLayout
-from PySide6.QtCore import QPoint
 
 # Inicjalizacja pygame do obsługi dźwięku
 pygame.mixer.init()
@@ -995,6 +994,34 @@ class ShowResultDialog(QDialog):
         
         self.canvas.draw()
 
+class ExportToPDFDialog(QDialog):
+    def __init__(self, patient_data, patient_tests, parent=None):
+        super().__init__(parent)
+        self.patient_data = patient_data
+        self.patient_tests = patient_tests
+        self.selected_test = None
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
+        self.setFixedSize(800, 500)
+        self.set_dark_mode()
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        self.title_bar = CustomDialogTitleBar(self, "Kreator eksportowania")
+        main_layout.addWidget(self.title_bar)
+        main_layout.addWidget(QLabel("""
+    Funkcja jest aktualnie niedostępna, jako iż jest w trakcie rozwijania.
+    Posiadasz wersję beta HB Audio Suite. Wersja ta jest niewspierana oficjalnie
+    i mogą wystąpić różnego rodzaju błędy.
+    Obsługa drukowania raportów pojawi się w niedalekiej przyszłości.
+            \nZaaktualizuj do najnowszej wersji, gdy tylko ta będzie dostępna, aby
+    uzyskać dostęp do funkcji niedostępnych w wersji beta."""))
+
+    def set_dark_mode(self):
+        pal = self.palette()
+        pal.setColor(QPalette.Window, QColor("#1e1e1e"))
+        pal.setColor(QPalette.WindowText, QColor("#f0f0f0"))
+        pal.setColor(QPalette.Base, QColor("#2d2d2d"))
+        pal.setColor(QPalette.Text, QColor("#f0f0f0"))
+        self.setPalette(pal)
 
 # -----------------------------------------------------------------------------
 # Main Application Window
@@ -1135,8 +1162,11 @@ class AudiometryApp(QMainWindow):
         button_layout.addWidget(self.delete_patient_button)
         self.delete_patient_button.clicked.connect(self.delete_patient)
         
+        self.print_button = QPushButton("Eksportuj")
+        button_layout.addWidget(self.print_button)
+        self.print_button.setStyleSheet(CHROME_BUTTON_STYLE)
         patient_layout.addLayout(button_layout)
-
+        self.print_button.setEnabled(False)  # startowo wyłączony
         # Panel historii testów
         history_panel = QFrame()
         history_panel.setFrameShape(QFrame.StyledPanel)
@@ -1298,6 +1328,7 @@ class AudiometryApp(QMainWindow):
         control_layout.addWidget(self.start_button)
         control_layout.addStretch()
         
+        
         audiometry_layout.addWidget(control_frame)
 
         app_content_layout.addWidget(audiometry_panel)
@@ -1314,6 +1345,7 @@ class AudiometryApp(QMainWindow):
         self.setFocus()
         self.patient_list.itemClicked.connect(self.select_patient)
         self.search_bar.textChanged.connect(self.filter_patients)
+        self.print_button.clicked.connect(self.open_export_dialog)
         self.test_history_list.itemDoubleClicked.connect(self.show_test_results_from_history)
 
         
@@ -1422,7 +1454,7 @@ class AudiometryApp(QMainWindow):
         self.start_button.setEnabled(True)
         self.delete_patient_button.setEnabled(True)
         self.patient_details_button.setEnabled(True)
-        
+        self.print_button.setEnabled(True)  # startowo wyłączony
         self.clear_plots()
         self.update_test_history_list()
         
@@ -1470,6 +1502,7 @@ class AudiometryApp(QMainWindow):
         self.start_button.setEnabled(False)
         self.delete_patient_button.setEnabled(False)
         self.patient_details_button.setEnabled(False)
+        self.print_button.setEnabled(False)  # startowo wyłączony
         self.patient_tests = []
 
     def clear_plots(self):
@@ -1654,6 +1687,16 @@ class AudiometryApp(QMainWindow):
             msg_box.setStandardButtons(QMessageBox.Ok)
             msg_box.exec()
             self.update_test_history_list()
+
+    def open_export_dialog(self):
+        if not self.current_patient:
+            return
+        patient_tests = self.database.get_tests_by_patient_id(self.current_patient['id'])
+        if not patient_tests:
+            QMessageBox.information(self, "Brak badań", "Pacjent nie ma zapisanych badań.")
+            return
+        dialog = ExportToPDFDialog(self.current_patient, patient_tests, self)
+        dialog.exec()
 
     def closeEvent(self, event: QCloseEvent):
         """Obsługuje zdarzenie zamknięcia aplikacji."""
