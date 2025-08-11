@@ -20,6 +20,12 @@ import os
 import threading
 from datetime import datetime
 from PySide6.QtWidgets import QHBoxLayout
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.units import cm
+
 
 # Inicjalizacja pygame do obsługi dźwięku
 pygame.mixer.init()
@@ -1046,8 +1052,42 @@ class ExportToPDFDialog(QDialog):
         for test in patient_tests:
             display_text = f"{test['timestamp']} (Tryb: {test['test_mode']})"
             self.test_list.addItem(display_text)
+        self.test_list.itemClicked.connect(self.on_test_selected)
         content_splitter.addWidget(self.test_list)
         self.test_list.setStyleSheet(LIST_STYLE)
+        self.test_list.setFixedWidth(300)
+
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
+
+        self.details_label = QLabel("Wybierz badanie po lewej.")
+        self.details_label.setFont(QFont("Arial", 12, QFont.Bold))
+        self.details_label.setStyleSheet("color: white;")
+        right_layout.addWidget(self.details_label)
+
+        self.description_edit = QTextEdit()
+        self.description_edit.setPlaceholderText("Wprowadź opis badania (opcjonalnie)")
+        self.description_edit.setStyleSheet(CHROME_TEXTBOX_STYLE)
+        right_layout.addWidget(self.description_edit)
+        
+        self.path_entry = QLineEdit()
+        self.path_entry.setPlaceholderText("Wprowadź ścieżkę eksportu")
+        self.path_entry.setStyleSheet(CHROME_TEXTBOX_STYLE)
+        self.path_entry.setText(r"D:\HB\exports")
+        right_layout.addWidget(self.path_entry)
+
+        btns_layout = QHBoxLayout()
+        export_btn = QPushButton("Eksportuj do pliku PDF")
+        export_btn.setStyleSheet(CHROME_BUTTON_STYLE)
+        export_btn.clicked.connect(self.export_pdf)
+        cancel_btn = QPushButton("Anuluj eksport")
+        cancel_btn.setStyleSheet(CHROME_BUTTON_STYLE)
+        cancel_btn.clicked.connect(self.reject)
+        btns_layout.addWidget(export_btn)
+        btns_layout.addWidget(cancel_btn)
+        right_layout.addLayout(btns_layout)
+
+        content_splitter.addWidget(right_widget)
         main_layout.addWidget(content_splitter)
 
     def set_dark_mode(self):
@@ -1057,6 +1097,44 @@ class ExportToPDFDialog(QDialog):
         pal.setColor(QPalette.Base, QColor("#2d2d2d"))
         pal.setColor(QPalette.Text, QColor("#f0f0f0"))
         self.setPalette(pal)
+
+    def on_test_selected(self, item):
+        index = self.test_list.row(item)
+        test = self.patient_tests[index]
+        self.details_label.setText(f"Badanie z {test['timestamp']} wybrane")
+
+    def reject(self):
+        super().reject()
+    
+    def export_pdf(self):
+        folder_path = self.path_entry.text().strip()
+        description = self.description_edit.toPlainText()
+
+        if not folder_path:
+            QMessageBox.warning(self, "Błąd", "Podaj ścieżkę eksportu!")
+            return
+
+        # Sprawdź, czy wybrano badanie
+        if self.test_list.currentRow() == -1:
+            QMessageBox.warning(self, "Błąd", "Wybierz badanie z listy!")
+            return
+
+        # Stwórz folder jeśli nie istnieje
+        os.makedirs(folder_path, exist_ok=True)
+
+        # Wygeneruj nazwę pliku np. 20250811_204512.txt
+        now = datetime.now()
+        filename = now.strftime("%Y%m%d_%H%M%S") + ".txt"
+        full_path = os.path.join(folder_path, filename)
+
+        try:
+            with open(full_path, "w", encoding="utf-8") as f:
+                f.write(description)
+            QMessageBox.information(self, "Sukces", f"Plik zapisany:\n{full_path}")
+            self.accept()  # zamknij dialog po sukcesie
+        except Exception as e:
+            QMessageBox.critical(self, "Błąd zapisu", f"Nie udało się zapisać pliku:\n{e}")
+
 
 # -----------------------------------------------------------------------------
 # Main Application Window
@@ -1166,7 +1244,7 @@ class AudiometryApp(QMainWindow):
         button_layout.addWidget(self.delete_patient_button)
         self.delete_patient_button.clicked.connect(self.delete_patient)
         
-        self.print_button = QPushButton("Eksportuj")
+        self.print_button = QPushButton("Otwórz Kreator eksportowania")
         button_layout.addWidget(self.print_button)
         self.print_button.setStyleSheet(CHROME_BUTTON_STYLE)
         patient_layout.addLayout(button_layout)
