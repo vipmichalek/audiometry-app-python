@@ -32,6 +32,39 @@ PULSE_PAUSE = 0.1 # przerwa między pulsacjami
 
 # Reusable Styles
 
+LIST_STYLE = """
+        QListWidget {
+            background-color: #2d2d2d;
+            border: 1px solid #4e4e4e;
+            background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                        stop:1 #3e3e3e, stop:0 #1f1f1f);
+        }
+        QListWidget::item {
+            border-bottom: 1px solid #4e4e4e;
+            padding: 5px;
+            color: white;
+        }
+        QListWidget::item:selected {
+            background-color: qlineargradient(
+            x1: 0, y1: 0, x2: 0, y2: 1,
+            stop: 0 #ffb74d,
+            stop: 0.499 #ffa014,
+            stop: 0.501 #d65600,
+            stop: 1 #ff8c00
+            );
+            color: black;
+            border: 1px solid #cc7000;
+            border-radius: 4px;
+            margin: 1px;
+        }
+        QListWidget::item:focus {
+            outline: none;
+        }                              
+        QListWidget {
+            outline: none;
+        }
+    """
+
 CHROME_BUTTON_STYLE = """
 QPushButton {
     background-color: qlineargradient(
@@ -1007,13 +1040,15 @@ class ExportToPDFDialog(QDialog):
         main_layout.setContentsMargins(0, 0, 0, 0)
         self.title_bar = CustomDialogTitleBar(self, "Kreator eksportowania")
         main_layout.addWidget(self.title_bar)
-        main_layout.addWidget(QLabel("""
-    Funkcja jest aktualnie niedostępna, jako iż jest w trakcie rozwijania.
-    Posiadasz wersję beta HB Audio Suite. Wersja ta jest niewspierana oficjalnie
-    i mogą wystąpić różnego rodzaju błędy.
-    Obsługa drukowania raportów pojawi się w niedalekiej przyszłości.
-            \nZaaktualizuj do najnowszej wersji, gdy tylko ta będzie dostępna, aby
-    uzyskać dostęp do funkcji niedostępnych w wersji beta."""))
+
+        content_splitter = QSplitter()
+        self.test_list = QListWidget()
+        for test in patient_tests:
+            display_text = f"{test['timestamp']} (Tryb: {test['test_mode']})"
+            self.test_list.addItem(display_text)
+        content_splitter.addWidget(self.test_list)
+        self.test_list.setStyleSheet(LIST_STYLE)
+        main_layout.addWidget(content_splitter)
 
     def set_dark_mode(self):
         pal = self.palette()
@@ -1113,38 +1148,7 @@ class AudiometryApp(QMainWindow):
         patient_layout.addWidget(self.search_bar)
         
         self.patient_list = QListWidget()
-        self.patient_list.setStyleSheet("""
-        QListWidget {
-            background-color: #2d2d2d;
-            border: 1px solid #4e4e4e;
-            background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:1 #3e3e3e, stop:0 #1f1f1f);
-        }
-        QListWidget::item {
-            border-bottom: 1px solid #4e4e4e;
-            padding: 5px;
-            color: white;
-        }
-        QListWidget::item:selected {
-            background-color: qlineargradient(
-            x1: 0, y1: 0, x2: 0, y2: 1,
-            stop: 0 #ffb74d,
-            stop: 0.499 #ffa014,
-            stop: 0.501 #d65600,
-            stop: 1 #ff8c00
-            );
-            color: black;
-            border: 1px solid #cc7000;
-            border-radius: 4px;
-            margin: 1px;
-        }
-        QListWidget::item:focus {
-            outline: none;
-        }                              
-        QListWidget {
-            outline: none;
-        }
-    """)
+        self.patient_list.setStyleSheet(LIST_STYLE)
         patient_layout.addWidget(self.patient_list)
 
         # Sekcja przycisków
