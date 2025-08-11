@@ -315,10 +315,10 @@ class CustomTitleBar(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         gradient = QLinearGradient(0, 0, 0, self.height())  # gradient pionowy
-        gradient.setColorAt(0, QColor("#8B8B8B"))
-        gradient.setColorAt(0.499, QColor("#696969"))
-        gradient.setColorAt(0.501, QColor("#424242"))
-        gradient.setColorAt(1, QColor("#757575"))
+        gradient.setColorAt(0, QColor("#555555"))
+        gradient.setColorAt(0.499, QColor("#393939"))
+        gradient.setColorAt(0.501, QColor("#161616"))
+        gradient.setColorAt(1, QColor("#484848"))
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setBrush(gradient)
         painter.setPen(Qt.NoPen)
@@ -326,6 +326,103 @@ class CustomTitleBar(QWidget):
         rect = self.rect()
         painter.drawRoundedRect(rect, 0, 0)  # większe zaokrąglenie dla ładniejszego efektu
 
+class CustomDialogTitleBar(QWidget):
+    def __init__(self, parent=None, title="Dialog"):
+        super().__init__(parent)
+        self.parent_dialog = parent
+        self.setFixedHeight(30)
+        self.setStyleSheet("""
+            QWidget {
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
+                background: transparent;
+            }
+        """)
+        
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(8, 3, 3, 3)
+        layout.setSpacing(4)
+        
+        self.title_label = QLabel(title)
+        self.title_label.setFont(QFont("Arial", 11, QFont.Bold))
+        self.title_label.setStyleSheet("background-color: transparent; color: white;")
+        layout.addWidget(self.title_label)
+        
+        layout.addStretch()
+        
+        self.close_button = QPushButton()
+        icons_dir = "icons"
+        self.close_button.setIcon(QIcon(os.path.join(icons_dir, "close.png")))
+        
+        button_size = QSize(24, 24)
+        close_style = """
+            QPushButton {
+                background-color: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #af0000,
+                    stop:0.499 #7c0000,
+                    stop:0.501 #4a0000,
+                    stop:1 #bf0000
+                );
+                color: white;
+                border: 1px solid #d0d0d0;
+                border-radius: 4px;
+                padding: 3px;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #df0000,
+                    stop:0.499 #ac0000,
+                    stop:0.501 #8a0000,
+                    stop:1 #ef0000
+                );
+            }
+            QPushButton:pressed {
+                background-color: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #7f0000,
+                    stop:0.499 #5c0000,
+                    stop:0.501 #2a0000,
+                    stop:1 #8f0000
+                );
+            }
+        """
+        self.close_button.setFixedSize(button_size)
+        self.close_button.setIconSize(QSize(14, 14))
+        self.close_button.setStyleSheet(close_style)
+        
+        layout.addWidget(self.close_button)
+        self.close_button.clicked.connect(self.parent_dialog.reject)
+        
+        self._start_pos = None
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.LeftButton:
+            self._start_pos = event.globalPos()
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if self._start_pos and event.buttons() == Qt.LeftButton:
+            delta = event.globalPos() - self._start_pos
+            self.parent_dialog.move(self.parent_dialog.pos() + delta)
+            self._start_pos = event.globalPos()
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        self._start_pos = None
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        gradient = QLinearGradient(0, 0, 0, self.height())
+        gradient.setColorAt(0, QColor("#555555"))
+        gradient.setColorAt(0.499, QColor("#393939"))
+        gradient.setColorAt(0.501, QColor("#161616"))
+        gradient.setColorAt(1, QColor("#484848"))
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setBrush(gradient)
+        painter.setPen(Qt.NoPen)
+        rect = self.rect()
+        painter.drawRoundedRect(rect, 0, 0)
+        
 class AudiometryWorker(QThread):
     """
     Wątek do przeprowadzania testu audiometrycznego w tle, aby nie blokować interfejsu użytkownika.
@@ -633,11 +730,18 @@ class AddPatientDialog(QDialog):
     """Okno dialogowe do dodawania nowego pacjenta."""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Dodaj nowego pacjenta")
         self.setFixedSize(400, 450)
         self.set_dark_mode()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
-        self.layout = QFormLayout(self)
+        
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0,0,0,0)
+        
+        self.title_bar = CustomDialogTitleBar(self, "Dodaj nowego pacjenta")
+        main_layout.addWidget(self.title_bar)
+        
+        content_widget = QWidget()
+        self.layout = QFormLayout(content_widget)
         
         self.name_input = QLineEdit()
         self.surname_input = QLineEdit()
@@ -691,6 +795,7 @@ class AddPatientDialog(QDialog):
             button.setStyleSheet(CHROME_BUTTON_STYLE)
 
         self.layout.addWidget(self.button_box)
+        main_layout.addWidget(content_widget)
 
     def set_dark_mode(self):
         """Ustawia ciemny motyw dla okna dialogowego."""
@@ -719,14 +824,20 @@ class PatientDetailsDialog(QDialog):
     """Okno dialogowe do wyświetlania i edycji szczegółów pacjenta."""
     def __init__(self, patient_data, database, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"Szczegóły pacjenta: {patient_data['name']} {patient_data['surname']}")
         self.resize(500, 500)
         self.set_dark_mode()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         self.patient_data = patient_data
         self.database = database
         
-        layout = QFormLayout(self)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0,0,0,0)
+        
+        self.title_bar = CustomDialogTitleBar(self, f"Szczegóły pacjenta: {patient_data['name']} {patient_data['surname']}")
+        main_layout.addWidget(self.title_bar)
+        
+        content_widget = QWidget()
+        layout = QFormLayout(content_widget)
         
         self.name_label = QLabel(f"Imię: {self.patient_data['name']}")
         self.surname_label = QLabel(f"Nazwisko: {self.patient_data['surname']}")
@@ -761,6 +872,7 @@ class PatientDetailsDialog(QDialog):
             button.setStyleSheet(CHROME_BUTTON_STYLE)
             
         layout.addWidget(self.button_box)
+        main_layout.addWidget(content_widget)
         
     def set_dark_mode(self):
         """Ustawia ciemny motyw dla okna dialogowego."""
@@ -793,12 +905,19 @@ class ShowResultDialog(QDialog):
     """Okno dialogowe do wyświetlania wyników pojedynczego testu."""
     def __init__(self, patient_data, test_data, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"Wyniki testu dla {patient_data['name']} {patient_data['surname']}")
         self.resize(800, 500)
         self.set_dark_mode()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
-        layout = QVBoxLayout(self)
-
+        
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0,0,0,0)
+        
+        self.title_bar = CustomDialogTitleBar(self, f"Wyniki testu dla {patient_data['name']} {patient_data['surname']}")
+        main_layout.addWidget(self.title_bar)
+        
+        content_widget = QWidget()
+        layout = QVBoxLayout(content_widget)
+        
         # Używamy jednego wykresu dla obu uszu
         self.fig, self.ax = plt.subplots(figsize=(10, 5))
         self.fig.set_facecolor('#1e1e1e')
@@ -808,6 +927,8 @@ class ShowResultDialog(QDialog):
         
         self.setup_plot(self.ax)
         self.draw_audiogram_from_results(test_data)
+        
+        main_layout.addWidget(content_widget)
 
     def set_dark_mode(self):
         """Ustawia ciemny motyw dla okna dialogowego."""
@@ -1559,4 +1680,4 @@ if __name__ == "__main__":
     # QTimer.singleShot(700, window.show) # Pokaż główne okno po 700 ms
     window.show()
     
-    sys.exit(app.exec())    
+    sys.exit(app.exec())
