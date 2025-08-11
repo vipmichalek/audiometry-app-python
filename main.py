@@ -1663,21 +1663,23 @@ class AudiometryApp(QMainWindow):
         self.database.close()
         event.accept()
 
+def show_main_window(splash, window):
+    """Closes the splash screen and shows the main window."""
+    splash.close()
+    window.show()
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     
     # Wczytaj obrazek splash screen
-    # splash_pixmap = QPixmap("splash.png")
-    #
-    # Utwórz splash screen z obrazkiem
-    # splash = QSplashScreen(splash_pixmap)
-    # splash.show()
+    splash_pixmap = QPixmap("splash.png")
     
-    # Symuluj ładowanie aplikacji
-    # QTimer.singleShot(700, splash.close) # Zamknij splash screen po 700 ms
+    # Utwórz splash screen z obrazkiem
+    splash = QSplashScreen(splash_pixmap)
+    splash.show()
     
     window = AudiometryApp()
-    # QTimer.singleShot(700, window.show) # Pokaż główne okno po 700 ms
-    window.show()
+    # Symuluj ładowanie aplikacji
+    QTimer.singleShot(1500, lambda: show_main_window(splash, window))
     
     sys.exit(app.exec())
