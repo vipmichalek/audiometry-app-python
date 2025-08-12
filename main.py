@@ -25,7 +25,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.units import cm
-
+from io import BytesIO
+import matplotlib.pyplot as plt
+from reportlab.platypus import Image, Table
 
 # Inicjalizacja pygame do obsługi dźwięku
 pygame.mixer.init()
@@ -1114,26 +1116,141 @@ class ExportToPDFDialog(QDialog):
             QMessageBox.warning(self, "Błąd", "Podaj ścieżkę eksportu!")
             return
 
-        # Sprawdź, czy wybrano badanie
         if self.test_list.currentRow() == -1:
             QMessageBox.warning(self, "Błąd", "Wybierz badanie z listy!")
             return
 
-        # Stwórz folder jeśli nie istnieje
         os.makedirs(folder_path, exist_ok=True)
 
-        # Wygeneruj nazwę pliku np. 20250811_204512.txt
         now = datetime.now()
-        filename = now.strftime("%Y%m%d_%H%M%S") + ".txt"
+        filename = now.strftime("%Y%m%d_%H%M%S") + ".pdf"
         full_path = os.path.join(folder_path, filename)
 
         try:
-            with open(full_path, "w", encoding="utf-8") as f:
-                f.write(description)
-            QMessageBox.information(self, "Sukces", f"Plik zapisany:\n{full_path}")
-            self.accept()  # zamknij dialog po sukcesie
+            doc = SimpleDocTemplate(full_path, pagesize=A4,
+                                    rightMargin=2*cm, leftMargin=2*cm,
+                                    topMargin=2*cm, bottomMargin=2*cm)
+
+            styles = getSampleStyleSheet()
+            left_align_style = ParagraphStyle(
+                'LeftAlign',
+                parent=styles['Normal'],
+                fontName='Times-Roman',
+                fontSize=11,
+                alignment=0,
+                spaceAfter=6
+            )
+            header_style = ParagraphStyle(
+                'HeaderStyle',
+                parent=styles['Heading2'],
+                alignment=TA_CENTER,
+                fontName='Times-Bold',
+                fontSize=12,
+                spaceAfter=15
+            )
+            bold_style = ParagraphStyle(
+                'BoldStyle',
+                parent=styles['Normal'],
+                fontName='Times-Bold',
+                fontSize=11,
+                spaceAfter=8
+            )
+            normal_style = ParagraphStyle(
+                'NormalStyle',
+                parent=styles['Normal'],
+                fontName='Times-Roman',
+                fontSize=11,
+                spaceAfter=12
+            )
+
+            elems = []
+
+            test = self.patient_tests[self.test_list.currentRow()]
+            test_datetime = test['timestamp']
+            if not isinstance(test_datetime, str):
+                test_datetime = test_datetime.strftime("%Y-%m-%d %H:%M")
+
+            patient_info_lines = [
+                test_datetime,
+                f"{self.patient_data.get('surname', '')} {self.patient_data.get('name', '')}",
+                f"Numer PESEL: {self.patient_data.get('pesel', '')}",
+                f"ID pacjenta: {self.patient_data.get('id', '')}",
+                f"Data urodzenia: {self.patient_data.get('dob', '')}"
+            ]
+
+            for line in patient_info_lines:
+                elems.append(Paragraph(line, left_align_style))
+
+            elems.append(Spacer(1, 15))
+            elems.append(Paragraph("AT (Audiometria tonalna)", header_style))
+
+            # --- Rysowanie audiogramów ---
+            results = test.get('results', {'left': {}, 'right': {}})
+            left_results = results.get('left', {})
+            right_results = results.get('right', {})
+
+            audiogram_images = []
+
+            for ear, ear_data, marker, title in [
+                ('left', left_results, 'o', "Audiogram tonalny ucho lewe"),
+                ('right', right_results, 'x', "Audiogram tonalny ucho prawe")
+            ]:
+                if ear_data:
+                    freqs = sorted([int(k) for k in ear_data.keys()])
+                    dbs = [ear_data[str(f)] for f in freqs]
+
+                    fig, ax = plt.subplots(figsize=(4, 4))
+
+                    # --- Tło na biało ---
+                    fig.patch.set_facecolor('white')
+                    ax.set_facecolor('white')
+                    ax.tick_params(axis='x', colors='black')
+                    ax.tick_params(axis='y', colors='black')
+                    ax.xaxis.label.set_color('black')
+                    ax.yaxis.label.set_color('black')
+                    ax.title.set_color('black')
+
+                    # --- Stała skala ---
+                    ax.set_xlim(-0.5, len(FREQUENCIES) - 0.5)
+                    ax.set_xticks(range(len(FREQUENCIES)))
+                    ax.set_xticklabels([str(f) for f in FREQUENCIES])
+                    ax.set_ylim(110, -10)
+                    ax.set_yticks(np.arange(0, 110, 10))
+                    ax.set_yticklabels([str(db) for db in np.arange(0, 110, 10)])
+
+                    ax.grid(True, linestyle='--', alpha=0.7, color='gray')
+
+                    # Wykres z odpowiednim markerem
+                    ax.plot(freqs, dbs, color='black', marker=marker, markersize=6, linestyle='-')
+                    ax.set_title(title, fontsize=11)
+                    ax.set_xlabel("Częstotliwość [Hz]")
+                    ax.set_ylabel("Natężenie [dB]")
+
+                    plt.tight_layout()
+
+                    buf = BytesIO()
+                    plt.savefig(buf, format='png', dpi=512, facecolor='white', bbox_inches=None, pad_inches=0.1)
+                    plt.close(fig)
+                    buf.seek(0)
+                    audiogram_images.append(Image(buf, width=8*cm, height=8*cm))
+                else:
+                    audiogram_images.append(Spacer(2, 10*cm))
+
+            # Oba obrazki w jednym wierszu
+            elems.append(Table([[audiogram_images[0], audiogram_images[1]]], colWidths=[8*cm, 8*cm]))
+            elems.append(Spacer(1, 15))
+
+            # Sekcja opisowa
+            elems.append(Paragraph("Opis:", bold_style))
+            elems.append(Paragraph(description.replace('\n', '<br/>'), normal_style))
+
+            doc.build(elems)
+
+            QMessageBox.information(self, "Sukces", f"Plik PDF zapisany:\n{full_path}")
+            self.accept()
         except Exception as e:
-            QMessageBox.critical(self, "Błąd zapisu", f"Nie udało się zapisać pliku:\n{e}")
+            QMessageBox.critical(self, "Błąd zapisu", f"Nie udało się zapisać pliku PDF:\n{e}")
+
 
 
 # -----------------------------------------------------------------------------
@@ -1145,7 +1262,7 @@ class AudiometryApp(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        # self.setWindowTitle("HB Audio Suite") # No longer needed with custom title bar
+        self.setWindowTitle("HB Audio Suite") # No longer needed with custom title bar
         self.setGeometry(100, 100, 1600, 1225)
 
         # Set frameless window hint before creating the layout
