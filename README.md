@@ -28,4 +28,16 @@ the signal settings are very similar too!
 
 <b>everything is and will always be in polish by default, however i might implement language packs or translations (probably via vibe coding as well)</b>
 
+# themes!
+i modified the thing for theming. now, the title bar theme can be changed in config.ini.
+
+dark: <br>
+<img width="402" height="52" alt="image" src="https://github.com/user-attachments/assets/9a28ba73-50ef-4161-808a-8149864a2c7e" /> <br>
+light: <br>
+<img width="413" height="46" alt="image" src="https://github.com/user-attachments/assets/beb98470-82a8-4186-b1eb-f7bfb3636f87" /> <br>
+like HIMSAs Noah 4 software: <br>
+<img width="415" height="53" alt="image" src="https://github.com/user-attachments/assets/e2b84bbc-9745-459d-ac96-8a1b515ce404" /> <br>
+
+theming will be implemented for the whole of the software also!
+
 enjoy the stupid thing.
