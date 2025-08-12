@@ -28,6 +28,7 @@ from reportlab.lib.units import cm
 from io import BytesIO
 import matplotlib.pyplot as plt
 from reportlab.platypus import Image, Table
+import configparser
 
 # Inicjalizacja pygame do obsługi dźwięku
 pygame.mixer.init()
@@ -174,74 +175,7 @@ QMessageBox QPushButton:pressed {
 }
 """
 
-
-
-def convert_numpy(obj):
-    """
-    Konwertuje obiekty numpy (np.integer, np.floating, np.ndarray) na standardowe typy Pythona.
-    Używane do serializacji danych do formatu JSON, ponieważ json.dumps nie obsługuje bezpośrednio typów numpy.
-    """
-    if isinstance(obj, np.integer):
-        return int(obj)
-    elif isinstance(obj, np.floating):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif isinstance(obj, dict):
-        return {k: convert_numpy(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_numpy(i) for i in obj]
-    else:
-        return obj
-
-class CustomTitleBar(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent_window = parent
-        self.setFixedHeight(30)
-
-        # Stylizacja obramowania (zaokrąglenia tylko góra)
-        self.setStyleSheet("""
-            QWidget {
-                border-top-left-radius: 10px;
-                border-top-right-radius: 10px;
-                /* Usuwamy tło w stylu, bo malujemy ręcznie */
-                background: transparent;
-            }
-        """)
-
-        # Główny layout poziomy
-        layout = QHBoxLayout(self)
-        # Marginesy: left, top, right, bottom
-        # Left - trochę na "oddech" dla napisu
-        # Right - więcej miejsca na przyciski z marginesem od krawędzi
-        layout.setContentsMargins(8, 3, 3, 3)
-        layout.setSpacing(4)  # Odstęp między widgetami (m.in. między przyciskami)
-
-        # Label z tytułem po lewej
-        self.title_label = QLabel("HB Audio Suite")
-        self.title_label.setFont(QFont("Arial", 11, QFont.Bold))
-        self.title_label.setStyleSheet("background-color: transparent; color: white;")
-        layout.addWidget(self.title_label)
-
-        layout.addStretch()  # Wypełni miejsce między tytułem a przyciskami
-
-        # Przyciski sterujące oknem
-        self.minimize_button = QPushButton()
-        self.maximize_button = QPushButton()
-        self.close_button = QPushButton()
-
-        # Ikony - ścieżka do folderu z ikonami
-        icons_dir = "icons"
-        self.minimize_button.setIcon(QIcon(os.path.join(icons_dir, "min.png")))
-        self.maximize_button.setIcon(QIcon(os.path.join(icons_dir, "max.png")))
-        self.close_button.setIcon(QIcon(os.path.join(icons_dir, "close.png")))
-
-        # Rozmiar przycisków mniejszy niż wcześniej (np. 26x26)
-        button_size = QSize(24, 24)
-
-        # Wspólne style dla min i max (z gradientem, zaokrąglone)
-        button_style = """
+TITLE_BAR_BTN_STYLE = """
             QPushButton {
                 background-color: qlineargradient(
                     x1:0, y1:0, x2:0, y2:1,
@@ -275,13 +209,7 @@ class CustomTitleBar(QWidget):
             }
         """
 
-        for btn in [self.minimize_button, self.maximize_button]:
-            btn.setFixedSize(button_size)
-            btn.setIconSize(QSize(14, 14))
-            btn.setStyleSheet(button_style)
-
-        # Specjalny styl dla przycisku zamykania (czerwony gradient)
-        close_style = """
+CLOSE_BTN_STYLE = """
             QPushButton {
                 background-color: qlineargradient(
                     x1:0, y1:0, x2:0, y2:1,
@@ -315,16 +243,170 @@ class CustomTitleBar(QWidget):
             }
         """
 
+COMBO_STYLE = """
+            QComboBox {
+                background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                        stop:0 #3e3e3e, stop:1 #1f1f1f);
+                padding: 4px;
+                color: white;
+                border: 1px solid #8f8f8f;
+                border-radius: 4px;
+            }
+            QComboBox::drop-down {
+                border: 0px; /* Usuwa domyślną strzałkę */
+            }
+            QComboBox::down-arrow {
+                image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAVElEQVQ4jWNgGAWjYBSMglGwAkYGBkZGBgYGhiwGIAYxMTAw/g/E/wXih2FmYGBgYGJgYGD4D4z/B8J/hJGBgQGYGNgAAgABBgYGBgYGBgYGBgAAADfE/14A+P8AAAAASUVORK5CYII=); /* Własna strzałka */
+                width: 16px;
+                height: 16px;
+            }
+        """
+
+START_BUTTON_STYLE = """
+            QPushButton {
+                background-color: qlineargradient(
+                x1: 0, y1: 0, x2: 0, y2: 1,
+                stop: 0 #ffb74d,
+                stop: 0.499 #ffa014,
+                stop: 0.501 #d65600,
+                stop: 1 #ff8c00
+                );
+                border-radius: 5px;
+                color: white;
+                font-weight: bold;
+                padding: 5px;
+                border: 1px solid #d0d0d0;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(
+                x1: 0, y1: 0, x2: 0, y2: 1,
+                stop: 0 #ffc97a,
+                stop: 0.499 #fcab32,
+                stop: 0.501 #d6793a,
+                stop: 1 #ffa12e
+                );
+            }
+            QPushButton:pressed {
+                background-color: qlineargradient(
+                x1: 0, y1: 0, x2: 0, y2: 1,
+                stop: 0 #faa72d,
+                stop: 0.499 #d18515,
+                stop: 0.501 #ab4500,
+                stop: 1 #cf7100
+                );
+            }
+            QPushButton:disabled {
+                background-color: qlineargradient(
+                x1: 0, y1: 0, x2: 0, y2: 1,
+                stop:0 #adadad,
+                stop:0.499 #9f9f9f,
+                stop:0.501 #6f6f6f, 
+                stop:1 #838383
+                );
+                color: black;
+            }
+        """
+
+def convert_numpy(obj):
+    """
+    Konwertuje obiekty numpy (np.integer, np.floating, np.ndarray) na standardowe typy Pythona.
+    Używane do serializacji danych do formatu JSON, ponieważ json.dumps nie obsługuje bezpośrednio typów numpy.
+    """
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {k: convert_numpy(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy(i) for i in obj]
+    else:
+        return obj
+
+def get_config():
+    """
+    Reads the config.ini file and returns only the titleBar setting.
+    """
+    config = configparser.ConfigParser()
+    config_file = 'config.ini'
+
+    # Jeśli brak pliku, tworzymy domyślny
+    if not os.path.exists(config_file):
+        print("config.ini not found. Creating with default titleBar value.")
+        config['Appearance'] = {'titleBar': 'darkGlossy'}
+        with open(config_file, 'w') as f:
+            config.write(f)
+
+    config.read(config_file)
+
+    # Jeśli brak sekcji lub klucza, ustaw domyślny
+    if 'Appearance' not in config:
+        config['Appearance'] = {}
+    if 'titleBar' not in config['Appearance']:
+        config['Appearance']['titleBar'] = 'darkGlossy'
+        with open(config_file, 'w') as f:
+            config.write(f)
+
+    return config['Appearance']['titleBar']
+
+class CustomTitleBar(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setFixedHeight(30)
+
+        # Wczytanie stylu titleBar z config.ini
+        self.title_bar_style = get_config()  # np. "darkGlossy", "lightGlossy", "Noah4"
+
+        self.setStyleSheet("""
+            QWidget {
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
+                background: transparent;
+            }
+        """)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(8, 3, 3, 3)
+        layout.setSpacing(4)
+
+        self.title_label = QLabel("HB Audio Suite")
+        self.title_label.setFont(QFont("Arial", 11, QFont.Bold))
+
+        # Ustal kolor tekstu zależnie od stylu
+        if self.title_bar_style == "lightGlossy":
+            self.title_label.setStyleSheet("background-color: transparent; color: black;")
+        else:
+            self.title_label.setStyleSheet("background-color: transparent; color: white;")
+
+        layout.addWidget(self.title_label)
+        layout.addStretch()
+
+        self.minimize_button = QPushButton()
+        self.maximize_button = QPushButton()
+        self.close_button = QPushButton()
+
+        icons_dir = "icons"
+        self.minimize_button.setIcon(QIcon(os.path.join(icons_dir, "min.png")))
+        self.maximize_button.setIcon(QIcon(os.path.join(icons_dir, "max.png")))
+        self.close_button.setIcon(QIcon(os.path.join(icons_dir, "close.png")))
+
+        button_size = QSize(24, 24)
+        for btn in [self.minimize_button, self.maximize_button]:
+            btn.setFixedSize(button_size)
+            btn.setIconSize(QSize(14, 14))
+            btn.setStyleSheet(TITLE_BAR_BTN_STYLE)
+
         self.close_button.setFixedSize(button_size)
         self.close_button.setIconSize(QSize(14, 14))
-        self.close_button.setStyleSheet(close_style)
+        self.close_button.setStyleSheet(CLOSE_BTN_STYLE)
 
-        # Dodajemy przyciski do layoutu (będą po prawej dzięki stretch)
         layout.addWidget(self.minimize_button)
         layout.addWidget(self.maximize_button)
         layout.addWidget(self.close_button)
 
-        # Podłączenie sygnałów do okna nadrzędnego
         self.minimize_button.clicked.connect(self.parent_window.showMinimized)
         self.maximize_button.clicked.connect(self.toggle_maximize_restore)
         self.close_button.clicked.connect(self.parent_window.close)
@@ -354,23 +436,41 @@ class CustomTitleBar(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        gradient = QLinearGradient(0, 0, 0, self.height())  # gradient pionowy
-        gradient.setColorAt(0, QColor("#555555"))
-        gradient.setColorAt(0.499, QColor("#393939"))
-        gradient.setColorAt(0.501, QColor("#161616"))
-        gradient.setColorAt(1, QColor("#484848"))
+        gradient = QLinearGradient(0, 0, 0, self.height())
+
+        if self.title_bar_style == "darkGlossy":
+            gradient.setColorAt(0, QColor("#555555"))
+            gradient.setColorAt(0.499, QColor("#393939"))
+            gradient.setColorAt(0.501, QColor("#161616"))
+            gradient.setColorAt(1, QColor("#484848"))
+
+        elif self.title_bar_style == "lightGlossy":
+            gradient.setColorAt(0, QColor("#e0e0e0"))
+            gradient.setColorAt(0.499, QColor("#cfcfcf"))
+            gradient.setColorAt(0.501, QColor("#b0b0b0"))
+            gradient.setColorAt(1, QColor("#d0d0d0"))
+
+        elif self.title_bar_style == "Noah4":
+            gradient.setColorAt(0, QColor("#00538a"))
+            gradient.setColorAt(0.499, QColor("#003479"))
+            gradient.setColorAt(0.501, QColor("#001f47"))
+            gradient.setColorAt(1, QColor("#004299"))
+
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setBrush(gradient)
         painter.setPen(Qt.NoPen)
+        painter.drawRoundedRect(self.rect(), 0, 0)
 
-        rect = self.rect()
-        painter.drawRoundedRect(rect, 0, 0)  # większe zaokrąglenie dla ładniejszego efektu
 
 class CustomDialogTitleBar(QWidget):
     def __init__(self, parent=None, title="Dialog"):
         super().__init__(parent)
         self.parent_dialog = parent
         self.setFixedHeight(30)
+
+        # Wczytanie stylu titleBar z config.ini
+        self.title_bar_style = get_config()  # np. "darkGlossy", "lightGlossy", "Noah4"
+
         self.setStyleSheet("""
             QWidget {
                 border-top-left-radius: 10px;
@@ -385,9 +485,14 @@ class CustomDialogTitleBar(QWidget):
         
         self.title_label = QLabel(title)
         self.title_label.setFont(QFont("Arial", 11, QFont.Bold))
-        self.title_label.setStyleSheet("background-color: transparent; color: white;")
-        layout.addWidget(self.title_label)
+
+        # Kolor tekstu w zależności od stylu
+        if self.title_bar_style == "lightGlossy":
+            self.title_label.setStyleSheet("background-color: transparent; color: black;")
+        else:
+            self.title_label.setStyleSheet("background-color: transparent; color: white;")
         
+        layout.addWidget(self.title_label)
         layout.addStretch()
         
         self.close_button = QPushButton()
@@ -395,42 +500,9 @@ class CustomDialogTitleBar(QWidget):
         self.close_button.setIcon(QIcon(os.path.join(icons_dir, "close.png")))
         
         button_size = QSize(24, 24)
-        close_style = """
-            QPushButton {
-                background-color: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #af0000,
-                    stop:0.499 #7c0000,
-                    stop:0.501 #4a0000,
-                    stop:1 #bf0000
-                );
-                color: white;
-                border: 1px solid #d0d0d0;
-                border-radius: 4px;
-                padding: 3px;
-            }
-            QPushButton:hover {
-                background-color: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #df0000,
-                    stop:0.499 #ac0000,
-                    stop:0.501 #8a0000,
-                    stop:1 #ef0000
-                );
-            }
-            QPushButton:pressed {
-                background-color: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #7f0000,
-                    stop:0.499 #5c0000,
-                    stop:0.501 #2a0000,
-                    stop:1 #8f0000
-                );
-            }
-        """
         self.close_button.setFixedSize(button_size)
         self.close_button.setIconSize(QSize(14, 14))
-        self.close_button.setStyleSheet(close_style)
+        self.close_button.setStyleSheet(CLOSE_BTN_STYLE)
         
         layout.addWidget(self.close_button)
         self.close_button.clicked.connect(self.parent_dialog.reject)
@@ -453,15 +525,30 @@ class CustomDialogTitleBar(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         gradient = QLinearGradient(0, 0, 0, self.height())
-        gradient.setColorAt(0, QColor("#555555"))
-        gradient.setColorAt(0.499, QColor("#393939"))
-        gradient.setColorAt(0.501, QColor("#161616"))
-        gradient.setColorAt(1, QColor("#484848"))
+
+        if self.title_bar_style == "darkGlossy":
+            gradient.setColorAt(0, QColor("#555555"))
+            gradient.setColorAt(0.499, QColor("#393939"))
+            gradient.setColorAt(0.501, QColor("#161616"))
+            gradient.setColorAt(1, QColor("#484848"))
+
+        elif self.title_bar_style == "lightGlossy":
+            gradient.setColorAt(0, QColor("#e0e0e0"))
+            gradient.setColorAt(0.499, QColor("#cfcfcf"))
+            gradient.setColorAt(0.501, QColor("#b0b0b0"))
+            gradient.setColorAt(1, QColor("#d0d0d0"))
+
+        elif self.title_bar_style == "Noah4":
+            gradient.setColorAt(0, QColor("#00538a"))
+            gradient.setColorAt(0.499, QColor("#003479"))
+            gradient.setColorAt(0.501, QColor("#001f47"))
+            gradient.setColorAt(1, QColor("#004299"))
+
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setBrush(gradient)
         painter.setPen(Qt.NoPen)
-        rect = self.rect()
-        painter.drawRoundedRect(rect, 0, 0)
+        painter.drawRoundedRect(self.rect(), 0, 0)
+
         
 class AudiometryWorker(QThread):
     """
@@ -799,25 +886,7 @@ class AddPatientDialog(QDialog):
         
         self.gender_combo = QComboBox()
         self.gender_combo.addItems(["Mężczyzna", "Kobieta", "Inne"])
-        self.gender_combo.setStyleSheet(
-            """
-            QComboBox {
-                background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:1 #3e3e3e, stop:0 #1f1f1f);
-                padding: 4px;
-                color: white;
-                border: 1px solid #8f8f8f;
-                border-radius: 4px;
-            }
-            QComboBox::drop-down {
-                border: 0px;
-            }
-            QComboBox::down-arrow {
-                image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAVElEQVQ4jWNgGAWjYBSMglGwAkYGBkZGBgYGhiwGIAYxMTAw/g/E/wXih2FmYGBgYGJgYGD4D4z/B8J/hJGBgQGYGNgAAgABBgYGBgYGBgYGBgAAADfE/14A+P8AAAAASUVORK5CYII=);
-                width: 16px;
-                height: 16px;
-            }
-        """)
+        self.gender_combo.setStyleSheet(COMBO_STYLE)
 
         self.layout.addRow("Imię:", self.name_input)
         self.layout.addRow("Nazwisko:", self.surname_input)
@@ -1436,34 +1505,15 @@ class AudiometryApp(QMainWindow):
         self.signal_type_combo.addItems(["sine", "square", "pulse"])
         settings_layout.addWidget(QLabel("Typ sygnału:"))
         settings_layout.addWidget(self.signal_type_combo)
-        
-        combo_style = """
-            QComboBox {
-                background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:0 #3e3e3e, stop:1 #1f1f1f);
-                padding: 4px;
-                color: white;
-                border: 1px solid #8f8f8f;
-                border-radius: 4px;
-            }
-            QComboBox::drop-down {
-                border: 0px; /* Usuwa domyślną strzałkę */
-            }
-            QComboBox::down-arrow {
-                image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAVElEQVQ4jWNgGAWjYBSMglGwAkYGBkZGBgYGhiwGIAYxMTAw/g/E/wXih2FmYGBgYGJgYGD4D4z/B8J/hJGBgQGYGNgAAgABBgYGBgYGBgYGBgAAADfE/14A+P8AAAAASUVORK5CYII=); /* Własna strzałka */
-                width: 16px;
-                height: 16px;
-            }
-        """
 
-        self.signal_type_combo.setStyleSheet(combo_style)
+        self.signal_type_combo.setStyleSheet(COMBO_STYLE)
 
         # Nowy: Dropdown Tryb testu
         self.test_mode_combo = QComboBox()
         self.test_mode_combo.addItems(["Obuusznie", "Ucho lewe", "Ucho prawe"])
         settings_layout.addWidget(QLabel("Tryb testu:"))
         settings_layout.addWidget(self.test_mode_combo)
-        self.test_mode_combo.setStyleSheet(combo_style) # Zastosowanie tego samego stylu
+        self.test_mode_combo.setStyleSheet(COMBO_STYLE) # Zastosowanie tego samego stylu
         self.test_mode_combo.currentIndexChanged.connect(self.on_test_mode_changed)
 
 
@@ -1480,50 +1530,7 @@ class AudiometryApp(QMainWindow):
         # Przycisk "Start" z gradientem
         self.start_button = QPushButton("Start")
         self.start_button.setFixedWidth(100)
-        self.start_button.setStyleSheet("""
-            QPushButton {
-                background-color: qlineargradient(
-                x1: 0, y1: 0, x2: 0, y2: 1,
-                stop: 0 #ffb74d,
-                stop: 0.499 #ffa014,
-                stop: 0.501 #d65600,
-                stop: 1 #ff8c00
-                );
-                border-radius: 5px;
-                color: white;
-                font-weight: bold;
-                padding: 5px;
-                border: 1px solid #d0d0d0;
-            }
-            QPushButton:hover {
-                background-color: qlineargradient(
-                x1: 0, y1: 0, x2: 0, y2: 1,
-                stop: 0 #ffc97a,
-                stop: 0.499 #fcab32,
-                stop: 0.501 #d6793a,
-                stop: 1 #ffa12e
-                );
-            }
-            QPushButton:pressed {
-                background-color: qlineargradient(
-                x1: 0, y1: 0, x2: 0, y2: 1,
-                stop: 0 #faa72d,
-                stop: 0.499 #d18515,
-                stop: 0.501 #ab4500,
-                stop: 1 #cf7100
-                );
-            }
-            QPushButton:disabled {
-                background-color: qlineargradient(
-                x1: 0, y1: 0, x2: 0, y2: 1,
-                stop:0 #adadad,
-                stop:0.499 #9f9f9f,
-                stop:0.501 #6f6f6f, 
-                stop:1 #838383
-                );
-                color: black;
-            }
-        """)
+        self.start_button.setStyleSheet(START_BUTTON_STYLE)
         control_layout.addWidget(self.start_button)
         control_layout.addStretch()
         
