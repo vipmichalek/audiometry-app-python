@@ -29,7 +29,7 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 from reportlab.platypus import Image, Table
 import configparser
-
+import themes
 # Inicjalizacja pygame do obsługi dźwięku
 pygame.mixer.init()
 
@@ -39,273 +39,6 @@ DB_HL = np.arange(0, 105, 5) # od 0 do 100 co 5 dB
 PULSE_DURATION = 0.1 # czas trwania pulsacji
 PULSE_PAUSE = 0.1 # przerwa między pulsacjami
 
-# Reusable Styles
-
-LIST_STYLE = """
-        QListWidget {
-            background-color: #2d2d2d;
-            border: 1px solid #4e4e4e;
-            background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:1 #3e3e3e, stop:0 #1f1f1f);
-        }
-        QListWidget::item {
-            border-bottom: 1px solid #4e4e4e;
-            padding: 5px;
-            color: white;
-        }
-        QListWidget::item:selected {
-            background-color: qlineargradient(
-            x1: 0, y1: 0, x2: 0, y2: 1,
-            stop: 0 #ffb74d,
-            stop: 0.499 #ffa014,
-            stop: 0.501 #d65600,
-            stop: 1 #ff8c00
-            );
-            color: black;
-            border: 1px solid #cc7000;
-            border-radius: 4px;
-            margin: 1px;
-        }
-        QListWidget::item:focus {
-            outline: none;
-        }                              
-        QListWidget {
-            outline: none;
-        }
-    """
-
-CHROME_BUTTON_STYLE = """
-QPushButton {
-    background-color: qlineargradient(
-        x1:0, y1:0, x2:0, y2:1,
-        stop:0 #5a5a5a,
-        stop:0.499 #3f3f3f,
-        stop:0.501 #2a2a2a, 
-        stop:1 #636363
-    );
-
-    color: white;
-    border: 1px solid #d0d0d0;
-    border-radius: 4px;
-    padding: 6px 12px;
-}
-QPushButton:hover {
-    background-color: qlineargradient(
-        x1:0, y1:0, x2:0, y2:1,
-        stop:0 #aaaaaa,
-        stop:0.499 #7f7f7f,
-        stop:0.501 #4a4a4a, 
-        stop:1 #636363
-    );
-}
-QPushButton:pressed {
-    background-color: qlineargradient(
-        x1:0, y1:0, x2:0, y2:1,
-        stop:0 #8a8a8a,
-        stop:0.499 #5f5f5f,
-        stop:0.501 #2a2a2a, 
-        stop:1 #434343
-    );
-}
-QPushButton:disabled {
-    background-color: qlineargradient(
-        x1:0, y1:0, x2:0, y2:1,
-        stop:0 #adadad,
-        stop:0.499 #9f9f9f,
-        stop:0.501 #6f6f6f, 
-        stop:1 #838383
-    );
-}
-"""
-
-CHROME_TEXTBOX_STYLE = """
- QLineEdit, QTextEdit {
-    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                    stop:1 #3e3e3e, stop:0 #1f1f1f);
-    border: 1px solid #8f8f8f;
-    border-radius: 6px;
-    padding: 4px;
-    color: white;
-}
-QLineEdit:focus, QTextEdit:focus {
-    border: 1px solid #8f8f8f;
-    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                    stop:1 #525252, stop:0 #303030);
-    color: white;
-}
-"""
-
-MESSAGE_BOX_STYLE = """
-QMessageBox {
-    background-color: #2d2d2d;
-}
-QMessageBox QLabel {
-    color: white;
-}
-QMessageBox QPushButton {
-    background-color: qlineargradient(
-        x1:0, y1:0, x2:0, y2:1,
-        stop:0 #5a5a5a,
-        stop:0.499 #3f3f3f,
-        stop:0.501 #2a2a2a, 
-        stop:1 #636363
-    );
-    color: white;
-    border: 1px solid #d0d0d0;
-    border-radius: 4px;
-    padding: 6px 12px;
-}
-QMessageBox QPushButton:hover {
-    background-color: qlineargradient(
-        x1:0, y1:0, x2:0, y2:1,
-        stop:0 #aaaaaa,
-        stop:0.499 #7f7f7f,
-        stop:0.501 #4a4a4a, 
-        stop:1 #636363
-    );
-}
-QMessageBox QPushButton:pressed {
-    background-color: qlineargradient(
-        x1:0, y1:0, x2:0, y2:1,
-        stop:0 #8a8a8a,
-        stop:0.499 #5f5f5f,
-        stop:0.501 #2a2a2a, 
-        stop:1 #434343
-    );
-}
-"""
-
-TITLE_BAR_BTN_STYLE = """
-            QPushButton {
-                background-color: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #5a5a5a,
-                    stop:0.499 #3f3f3f,
-                    stop:0.501 #2a2a2a,
-                    stop:1 #636363
-                );
-                color: white;
-                border: 1px solid #d0d0d0;
-                border-radius: 4px;
-                padding: 3px;
-            }
-            QPushButton:hover {
-                background-color: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #aaaaaa,
-                    stop:0.499 #7f7f7f,
-                    stop:0.501 #4a4a4a,
-                    stop:1 #636363
-                );
-            }
-            QPushButton:pressed {
-                background-color: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #8a8a8a,
-                    stop:0.499 #5f5f5f,
-                    stop:0.501 #2a2a2a,
-                    stop:1 #434343
-                );
-            }
-        """
-
-CLOSE_BTN_STYLE = """
-            QPushButton {
-                background-color: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #af0000,
-                    stop:0.499 #7c0000,
-                    stop:0.501 #4a0000,
-                    stop:1 #bf0000
-                );
-                color: white;
-                border: 1px solid #d0d0d0;
-                border-radius: 4px;
-                padding: 3px;
-            }
-            QPushButton:hover {
-                background-color: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #df0000,
-                    stop:0.499 #ac0000,
-                    stop:0.501 #8a0000,
-                    stop:1 #ef0000
-                );
-            }
-            QPushButton:pressed {
-                background-color: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #7f0000,
-                    stop:0.499 #5c0000,
-                    stop:0.501 #2a0000,
-                    stop:1 #8f0000
-                );
-            }
-        """
-
-COMBO_STYLE = """
-            QComboBox {
-                background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:0 #3e3e3e, stop:1 #1f1f1f);
-                padding: 4px;
-                color: white;
-                border: 1px solid #8f8f8f;
-                border-radius: 4px;
-            }
-            QComboBox::drop-down {
-                border: 0px; /* Usuwa domyślną strzałkę */
-            }
-            QComboBox::down-arrow {
-                image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAVElEQVQ4jWNgGAWjYBSMglGwAkYGBkZGBgYGhiwGIAYxMTAw/g/E/wXih2FmYGBgYGJgYGD4D4z/B8J/hJGBgQGYGNgAAgABBgYGBgYGBgYGBgAAADfE/14A+P8AAAAASUVORK5CYII=); /* Własna strzałka */
-                width: 16px;
-                height: 16px;
-            }
-        """
-
-START_BUTTON_STYLE = """
-            QPushButton {
-                background-color: qlineargradient(
-                x1: 0, y1: 0, x2: 0, y2: 1,
-                stop: 0 #ffb74d,
-                stop: 0.499 #ffa014,
-                stop: 0.501 #d65600,
-                stop: 1 #ff8c00
-                );
-                border-radius: 5px;
-                color: white;
-                font-weight: bold;
-                padding: 5px;
-                border: 1px solid #d0d0d0;
-            }
-            QPushButton:hover {
-                background-color: qlineargradient(
-                x1: 0, y1: 0, x2: 0, y2: 1,
-                stop: 0 #ffc97a,
-                stop: 0.499 #fcab32,
-                stop: 0.501 #d6793a,
-                stop: 1 #ffa12e
-                );
-            }
-            QPushButton:pressed {
-                background-color: qlineargradient(
-                x1: 0, y1: 0, x2: 0, y2: 1,
-                stop: 0 #faa72d,
-                stop: 0.499 #d18515,
-                stop: 0.501 #ab4500,
-                stop: 1 #cf7100
-                );
-            }
-            QPushButton:disabled {
-                background-color: qlineargradient(
-                x1: 0, y1: 0, x2: 0, y2: 1,
-                stop:0 #adadad,
-                stop:0.499 #9f9f9f,
-                stop:0.501 #6f6f6f, 
-                stop:1 #838383
-                );
-                color: black;
-            }
-        """
 
 def convert_numpy(obj):
     """
@@ -350,6 +83,18 @@ def get_config():
             config.write(f)
 
     return config['Appearance']['titleBar']
+
+title_bar_theme = get_config()
+
+# Reusable Styles
+LIST_STYLE = themes.get_ListStyleA()
+CHROME_BUTTON_STYLE = themes.get_ChromeBStyleA()
+CHROME_TEXTBOX_STYLE = themes.get_ChromeTStyleA()
+MESSAGE_BOX_STYLE = themes.get_MsgBoxStyleA()
+TITLE_BAR_BTN_STYLE = themes.get_TitleBtnStyleA()
+CLOSE_BTN_STYLE = themes.get_CloseBtnStyleA()
+COMBO_STYLE = themes.get_ComboStyleA()
+START_BUTTON_STYLE = themes.get_StartStyleA()
 
 class CustomTitleBar(QWidget):
     def __init__(self, parent=None):
@@ -907,14 +652,28 @@ class AddPatientDialog(QDialog):
         main_layout.addWidget(content_widget)
 
     def set_dark_mode(self):
-        """Ustawia ciemny motyw dla okna dialogowego."""
+        """Ustawia motyw dla okna dialogowego na podstawie config.ini."""
+
+        title_bar_theme = get_config()  # pobierz wartość titleBar z configu
+
         palette = self.palette()
-        dark_mode_color = QColor("#1e1e1e")
-        text_color = QColor("#f0f0f0")
+
+        if title_bar_theme == "darkGlossy":
+            # ciemny motyw
+            dark_mode_color = QColor("#1e1e1e")
+            text_color = QColor("#f0f0f0")
+            base_color = QColor("#2d2d2d")
+        else:
+            # jasny motyw
+            dark_mode_color = QColor("#dadada")  # jasne tło
+            text_color = QColor("#000000")       # czarny tekst
+            base_color = QColor("#fafafa")       # jasny base (np. pola tekstowe)
+
         palette.setColor(QPalette.Window, dark_mode_color)
         palette.setColor(QPalette.WindowText, text_color)
-        palette.setColor(QPalette.Base, QColor("#2d2d2d"))
+        palette.setColor(QPalette.Base, base_color)
         palette.setColor(QPalette.Text, text_color)
+
         self.setPalette(palette)
 
     def get_data(self):
@@ -984,14 +743,28 @@ class PatientDetailsDialog(QDialog):
         main_layout.addWidget(content_widget)
         
     def set_dark_mode(self):
-        """Ustawia ciemny motyw dla okna dialogowego."""
+        """Ustawia motyw dla okna dialogowego na podstawie config.ini."""
+
+        title_bar_theme = get_config()  # pobierz wartość titleBar z configu
+
         palette = self.palette()
-        dark_mode_color = QColor("#1e1e1e")
-        text_color = QColor("#f0f0f0")
+
+        if title_bar_theme == "darkGlossy":
+            # ciemny motyw
+            dark_mode_color = QColor("#1e1e1e")
+            text_color = QColor("#dadada")
+            base_color = QColor("#2d2d2d")
+        else:
+            # jasny motyw
+            dark_mode_color = QColor("#dadada")  # jasne tło
+            text_color = QColor("#000000")       # czarny tekst
+            base_color = QColor("#fafafa")       # jasny base (np. pola tekstowe)
+
         palette.setColor(QPalette.Window, dark_mode_color)
         palette.setColor(QPalette.WindowText, text_color)
-        palette.setColor(QPalette.Base, QColor("#2d2d2d"))
+        palette.setColor(QPalette.Base, base_color)
         palette.setColor(QPalette.Text, text_color)
+
         self.setPalette(palette)
         
     def save_notes(self):
@@ -1040,14 +813,28 @@ class ShowResultDialog(QDialog):
         main_layout.addWidget(content_widget)
 
     def set_dark_mode(self):
-        """Ustawia ciemny motyw dla okna dialogowego."""
+        """Ustawia motyw dla okna dialogowego na podstawie config.ini."""
+
+        title_bar_theme = get_config()  # pobierz wartość titleBar z configu
+
         palette = self.palette()
-        dark_mode_color = QColor("#1e1e1e")
-        text_color = QColor("#f0f0f0")
+
+        if title_bar_theme == "darkGlossy":
+            # ciemny motyw
+            dark_mode_color = QColor("#1e1e1e")
+            text_color = QColor("#f0f0f0")
+            base_color = QColor("#2d2d2d")
+        else:
+            # jasny motyw
+            dark_mode_color = QColor("#dadada")  # jasne tło
+            text_color = QColor("#000000")       # czarny tekst
+            base_color = QColor("#fafafa")       # jasny base (np. pola tekstowe)
+
         palette.setColor(QPalette.Window, dark_mode_color)
         palette.setColor(QPalette.WindowText, text_color)
-        palette.setColor(QPalette.Base, QColor("#2d2d2d"))
+        palette.setColor(QPalette.Base, base_color)
         palette.setColor(QPalette.Text, text_color)
+
         self.setPalette(palette)
 
     def setup_plot(self, ax):
@@ -1117,7 +904,7 @@ class ExportToPDFDialog(QDialog):
         main_layout.setContentsMargins(0, 0, 0, 0)
         self.title_bar = CustomDialogTitleBar(self, "Kreator eksportowania")
         main_layout.addWidget(self.title_bar)
-
+        title_bar_theme = get_config()
         content_splitter = QSplitter()
         self.test_list = QListWidget()
         for test in patient_tests:
@@ -1133,7 +920,10 @@ class ExportToPDFDialog(QDialog):
 
         self.details_label = QLabel("Wybierz badanie po lewej.")
         self.details_label.setFont(QFont("Arial", 12, QFont.Bold))
-        self.details_label.setStyleSheet("color: white;")
+        if title_bar_theme == "darkGlossy":
+            self.details_label.setStyleSheet("color: white;")
+        else:
+            self.details_label.setStyleSheet("color: black;")
         right_layout.addWidget(self.details_label)
 
         self.description_edit = QTextEdit()
@@ -1162,12 +952,29 @@ class ExportToPDFDialog(QDialog):
         main_layout.addWidget(content_splitter)
 
     def set_dark_mode(self):
-        pal = self.palette()
-        pal.setColor(QPalette.Window, QColor("#1e1e1e"))
-        pal.setColor(QPalette.WindowText, QColor("#f0f0f0"))
-        pal.setColor(QPalette.Base, QColor("#2d2d2d"))
-        pal.setColor(QPalette.Text, QColor("#f0f0f0"))
-        self.setPalette(pal)
+        """Ustawia motyw dla okna dialogowego na podstawie config.ini."""
+
+        title_bar_theme = get_config()  # pobierz wartość titleBar z configu
+
+        palette = self.palette()
+
+        if title_bar_theme == "darkGlossy":
+            # ciemny motyw
+            dark_mode_color = QColor("#1e1e1e")
+            text_color = QColor("#f0f0f0")
+            base_color = QColor("#2d2d2d")
+        else:
+            # jasny motyw
+            dark_mode_color = QColor("#dadada")  # jasne tło
+            text_color = QColor("#000000")       # czarny tekst
+            base_color = QColor("#fafafa")       # jasny base (np. pola tekstowe)
+
+        palette.setColor(QPalette.Window, dark_mode_color)
+        palette.setColor(QPalette.WindowText, text_color)
+        palette.setColor(QPalette.Base, base_color)
+        palette.setColor(QPalette.Text, text_color)
+
+        self.setPalette(palette)
 
     def on_test_selected(self, item):
         index = self.test_list.row(item)
@@ -1355,24 +1162,55 @@ class AudiometryApp(QMainWindow):
 
 
     def set_dark_mode(self):
-        """Ustawia ciemny motyw dla całej aplikacji."""
+        """Ustawia motyw dla całej aplikacji na podstawie config.ini."""
+
+        title_bar_theme = get_config()  # pobierz wartość titleBar z configu
+
         palette = self.palette()
-        dark_mode_color = QColor("#1e1e1e")
-        text_color = QColor("#f0f0f0")
-        
-        palette.setColor(QPalette.Window, dark_mode_color)
-        palette.setColor(QPalette.WindowText, text_color)
-        palette.setColor(QPalette.Base, QColor("#2d2d2d"))
-        palette.setColor(QPalette.AlternateBase, QColor("#3c3c3c"))
-        palette.setColor(QPalette.ToolTipBase, dark_mode_color)
-        palette.setColor(QPalette.ToolTipText, text_color)
-        palette.setColor(QPalette.Text, text_color)
-        palette.setColor(QPalette.Button, QColor("#4e4e4e"))
-        palette.setColor(QPalette.ButtonText, text_color)
-        palette.setColor(QPalette.BrightText, QColor("red"))
-        palette.setColor(QPalette.Highlight, QColor("#1f67b5"))
-        palette.setColor(QPalette.HighlightedText, QColor("black"))
-        
+
+        # Stałe kolory, które nie zmieniają się
+        bright_text = QColor("red")
+        highlight = QColor("#1f67b5")
+        highlighted_text = QColor("black")
+
+        if title_bar_theme == "darkGlossy":
+            # ciemny motyw
+            window = QColor("#1e1e1e")
+            window_text = QColor("#f0f0f0")
+            base = QColor("#2d2d2d")
+            alternate_base = QColor("#3c3c3c")
+            button = QColor("#4e4e4e")
+            button_text = window_text
+            tooltip_base = window
+            tooltip_text = window_text
+            text = window_text
+        else:
+            # jasny motyw
+            window = QColor("#dadada")
+            window_text = QColor("#000000")
+            base = QColor("#fafafa")
+            alternate_base = QColor("#e0e0e0")
+            button = QColor("#dcdcdc")
+            button_text = window_text
+            tooltip_base = window
+            tooltip_text = window_text
+            text = window_text
+
+        palette.setColor(QPalette.Window, window)
+        palette.setColor(QPalette.WindowText, window_text)
+        palette.setColor(QPalette.Base, base)
+        palette.setColor(QPalette.AlternateBase, alternate_base)
+        palette.setColor(QPalette.ToolTipBase, tooltip_base)
+        palette.setColor(QPalette.ToolTipText, tooltip_text)
+        palette.setColor(QPalette.Text, text)
+        palette.setColor(QPalette.Button, button)
+        palette.setColor(QPalette.ButtonText, button_text)
+
+        # Kolory niezmienne
+        palette.setColor(QPalette.BrightText, bright_text)
+        palette.setColor(QPalette.Highlight, highlight)
+        palette.setColor(QPalette.HighlightedText, highlighted_text)
+
         self.setPalette(palette)
         
     def create_widgets(self):
