@@ -86,15 +86,34 @@ def get_config():
 
 title_bar_theme = get_config()
 
-# Reusable Styles
-LIST_STYLE = themes.get_ListStyleA()
-CHROME_BUTTON_STYLE = themes.get_ChromeBStyleA()
-CHROME_TEXTBOX_STYLE = themes.get_ChromeTStyleA()
-MESSAGE_BOX_STYLE = themes.get_MsgBoxStyleA()
-TITLE_BAR_BTN_STYLE = themes.get_TitleBtnStyleA()
-CLOSE_BTN_STYLE = themes.get_CloseBtnStyleA()
-COMBO_STYLE = themes.get_ComboStyleA()
-START_BUTTON_STYLE = themes.get_StartStyleA()
+if title_bar_theme == "darkGlossy":
+    LIST_STYLE = themes.get_ListStyleA()
+    CHROME_BUTTON_STYLE = themes.get_ChromeBStyleA()
+    CHROME_TEXTBOX_STYLE = themes.get_ChromeTStyleA()
+    MESSAGE_BOX_STYLE = themes.get_MsgBoxStyleA()
+    TITLE_BAR_BTN_STYLE = themes.get_TitleBtnStyleA()
+    CLOSE_BTN_STYLE = themes.get_CloseBtnStyleA()
+    COMBO_STYLE = themes.get_ComboStyleA()
+    START_BUTTON_STYLE = themes.get_StartStyleA()
+elif title_bar_theme == "lightGlossy":
+    LIST_STYLE = themes.get_ListStyleB()
+    CHROME_BUTTON_STYLE = themes.get_ChromeBStyleB()
+    CHROME_TEXTBOX_STYLE = themes.get_ChromeTStyleB()
+    MESSAGE_BOX_STYLE = themes.get_MsgBoxStyleB()
+    TITLE_BAR_BTN_STYLE = themes.get_TitleBtnStyleB()
+    CLOSE_BTN_STYLE = themes.get_CloseBtnStyleA()
+    COMBO_STYLE = themes.get_ComboStyleB()
+    START_BUTTON_STYLE = themes.get_StartStyleB()
+else:
+    print("application theme not configured, using fallback")
+    LIST_STYLE = themes.get_ListStyleA()
+    CHROME_BUTTON_STYLE = themes.get_ChromeBStyleA()
+    CHROME_TEXTBOX_STYLE = themes.get_ChromeTStyleA()
+    MESSAGE_BOX_STYLE = themes.get_MsgBoxStyleA()
+    TITLE_BAR_BTN_STYLE = themes.get_TitleBtnStyleA()
+    CLOSE_BTN_STYLE = themes.get_CloseBtnStyleA()
+    COMBO_STYLE = themes.get_ComboStyleA()
+    START_BUTTON_STYLE = themes.get_StartStyleA()
 
 class CustomTitleBar(QWidget):
     def __init__(self, parent=None):
@@ -194,12 +213,12 @@ class CustomTitleBar(QWidget):
             gradient.setColorAt(0.499, QColor("#cfcfcf"))
             gradient.setColorAt(0.501, QColor("#b0b0b0"))
             gradient.setColorAt(1, QColor("#d0d0d0"))
-
-        elif self.title_bar_style == "Noah4":
-            gradient.setColorAt(0, QColor("#00538a"))
-            gradient.setColorAt(0.499, QColor("#003479"))
-            gradient.setColorAt(0.501, QColor("#001f47"))
-            gradient.setColorAt(1, QColor("#004299"))
+        else:
+            print("application theme not configured, using fallback")
+            gradient.setColorAt(0, QColor("#555555"))
+            gradient.setColorAt(0.499, QColor("#393939"))
+            gradient.setColorAt(0.501, QColor("#161616"))
+            gradient.setColorAt(1, QColor("#484848"))
 
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setBrush(gradient)
@@ -283,11 +302,12 @@ class CustomDialogTitleBar(QWidget):
             gradient.setColorAt(0.501, QColor("#b0b0b0"))
             gradient.setColorAt(1, QColor("#d0d0d0"))
 
-        elif self.title_bar_style == "Noah4":
-            gradient.setColorAt(0, QColor("#00538a"))
-            gradient.setColorAt(0.499, QColor("#003479"))
-            gradient.setColorAt(0.501, QColor("#001f47"))
-            gradient.setColorAt(1, QColor("#004299"))
+        else:
+            print("application theme not configured, using fallback")
+            gradient.setColorAt(0, QColor("#555555"))
+            gradient.setColorAt(0.499, QColor("#393939"))
+            gradient.setColorAt(0.501, QColor("#161616"))
+            gradient.setColorAt(1, QColor("#484848"))
 
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setBrush(gradient)
@@ -663,11 +683,17 @@ class AddPatientDialog(QDialog):
             dark_mode_color = QColor("#1e1e1e")
             text_color = QColor("#f0f0f0")
             base_color = QColor("#2d2d2d")
-        else:
+        elif title_bar_theme == "lightGlossy":
             # jasny motyw
-            dark_mode_color = QColor("#dadada")  # jasne tło
+            dark_mode_color = QColor("#cccccc")  # jasne tło
             text_color = QColor("#000000")       # czarny tekst
             base_color = QColor("#fafafa")       # jasny base (np. pola tekstowe)
+        else:
+            print("application theme not configured, using fallback")
+            # ciemny motyw
+            dark_mode_color = QColor("#1e1e1e")
+            text_color = QColor("#f0f0f0")
+            base_color = QColor("#2d2d2d")
 
         palette.setColor(QPalette.Window, dark_mode_color)
         palette.setColor(QPalette.WindowText, text_color)
@@ -754,11 +780,17 @@ class PatientDetailsDialog(QDialog):
             dark_mode_color = QColor("#1e1e1e")
             text_color = QColor("#dadada")
             base_color = QColor("#2d2d2d")
-        else:
+        elif title_bar_theme == "lightGlossy":
             # jasny motyw
-            dark_mode_color = QColor("#dadada")  # jasne tło
+            dark_mode_color = QColor("#cccccc")  # jasne tło
             text_color = QColor("#000000")       # czarny tekst
             base_color = QColor("#fafafa")       # jasny base (np. pola tekstowe)
+        else:
+            print("application theme not configured, using fallback")
+            # ciemny motyw
+            dark_mode_color = QColor("#1e1e1e")
+            text_color = QColor("#f0f0f0")
+            base_color = QColor("#2d2d2d")
 
         palette.setColor(QPalette.Window, dark_mode_color)
         palette.setColor(QPalette.WindowText, text_color)
@@ -824,12 +856,18 @@ class ShowResultDialog(QDialog):
             dark_mode_color = QColor("#1e1e1e")
             text_color = QColor("#f0f0f0")
             base_color = QColor("#2d2d2d")
-        else:
+        elif title_bar_theme == "lightGlossy":
             # jasny motyw
-            dark_mode_color = QColor("#dadada")  # jasne tło
+            dark_mode_color = QColor("#cccccc")  # jasne tło
             text_color = QColor("#000000")       # czarny tekst
             base_color = QColor("#fafafa")       # jasny base (np. pola tekstowe)
-
+        else:
+            print("application theme not configured, using fallback")
+            # ciemny motyw
+            dark_mode_color = QColor("#1e1e1e")
+            text_color = QColor("#f0f0f0")
+            base_color = QColor("#2d2d2d")
+        
         palette.setColor(QPalette.Window, dark_mode_color)
         palette.setColor(QPalette.WindowText, text_color)
         palette.setColor(QPalette.Base, base_color)
@@ -963,11 +1001,16 @@ class ExportToPDFDialog(QDialog):
             dark_mode_color = QColor("#1e1e1e")
             text_color = QColor("#f0f0f0")
             base_color = QColor("#2d2d2d")
-        else:
+        elif title_bar_theme == "lightGlossy":
             # jasny motyw
-            dark_mode_color = QColor("#dadada")  # jasne tło
+            dark_mode_color = QColor("#cccccc")  # jasne tło
             text_color = QColor("#000000")       # czarny tekst
             base_color = QColor("#fafafa")       # jasny base (np. pola tekstowe)
+        else:
+            print("application theme not configured, using fallback")
+            dark_mode_color = QColor("#1e1e1e")
+            text_color = QColor("#f0f0f0")
+            base_color = QColor("#2d2d2d")
 
         palette.setColor(QPalette.Window, dark_mode_color)
         palette.setColor(QPalette.WindowText, text_color)
@@ -1184,13 +1227,25 @@ class AudiometryApp(QMainWindow):
             tooltip_base = window
             tooltip_text = window_text
             text = window_text
-        else:
+        elif title_bar_theme == "lightGlossy":
             # jasny motyw
-            window = QColor("#dadada")
+            window = QColor("#cccccc")
             window_text = QColor("#000000")
             base = QColor("#fafafa")
             alternate_base = QColor("#e0e0e0")
             button = QColor("#dcdcdc")
+            button_text = window_text
+            tooltip_base = window
+            tooltip_text = window_text
+            text = window_text
+        else:
+            print("application theme not configured, using fallback")
+            # ciemny motyw
+            window = QColor("#1e1e1e")
+            window_text = QColor("#f0f0f0")
+            base = QColor("#2d2d2d")
+            alternate_base = QColor("#3c3c3c")
+            button = QColor("#4e4e4e")
             button_text = window_text
             tooltip_base = window
             tooltip_text = window_text
@@ -1312,10 +1367,23 @@ class AudiometryApp(QMainWindow):
         chart_frame.setFrameShape(QFrame.StyledPanel)
         chart_layout = QHBoxLayout(chart_frame)
 
-        plt.style.use('dark_background')
+        title_bar_theme = get_config()
+        if title_bar_theme == "darkGlossy":
+            plt.style.use('dark_background')
+        elif title_bar_theme == "lightGlossy":
+            plt.style.use('default')
+        else:
+            print("application theme not configured, using fallback")
+            plt.style.use('dark_background')
+        
         self.fig, self.ax = plt.subplots(figsize=(10, 5))
-        self.fig.set_facecolor('#1e1e1e')
-
+        if title_bar_theme == "darkGlossy":
+            self.fig.set_facecolor('#1e1e1e')
+        elif title_bar_theme == "lightGlossy":
+            self.fig.set_facecolor('#fafafa')
+        else:
+            print("application theme not configured, using fallback")
+            self.fig.set_facecolor('#1e1e1e')
         self.canvas = FigureCanvas(self.fig)
         self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         chart_layout.addWidget(self.canvas)
@@ -1650,27 +1718,65 @@ class AudiometryApp(QMainWindow):
         Konfiguruje wygląd pojedynczego wykresu audiogramu.
         :param ax: Obiekt osi matplotlib.
         """
-        ax.set_title("Audiogram", color='white')
-        ax.set_xlabel("Częstotliwość (Hz)", color='white')
-        ax.set_ylabel("Poziom (dB HL)", color='white')
-        
+        title_bar_theme = get_config()
+        if title_bar_theme == "darkGlossy":
+            ax.set_title("Audiogram", color='white')
+            ax.set_xlabel("Częstotliwość (Hz)", color='white')
+            ax.set_ylabel("Poziom (dB HL)", color='white')
+        elif title_bar_theme == "lightGlossy":
+            ax.set_title("Audiogram", color='black')
+            ax.set_xlabel("Częstotliwość (Hz)", color='black')
+            ax.set_ylabel("Poziom (dB HL)", color='black')
+        else:
+            print("application theme not configured, using fallback")
+            ax.set_title("Audiogram", color='white')
+            ax.set_xlabel("Częstotliwość (Hz)", color='white')
+            ax.set_ylabel("Poziom (dB HL)", color='white')
+
         ax.set_xlim(-0.5, len(FREQUENCIES) - 0.5)
         ax.set_xticks(range(len(FREQUENCIES)))
-        ax.set_xticklabels([str(f) for f in FREQUENCIES], color='white')
+        if title_bar_theme == "darkGlossy":
+            ax.set_xticklabels([str(f) for f in FREQUENCIES], color='white')
+        elif title_bar_theme == "lightGlossy":
+            ax.set_xticklabels([str(f) for f in FREQUENCIES], color='black')
+        else:
+            print("application theme not configured, using fallback")
+            ax.set_xticklabels([str(f) for f in FREQUENCIES], color='white')            
         
         ax.set_ylim(110, -10)
         ax.set_yticks(np.arange(0, 110, 10))
-        ax.set_yticklabels([str(db) for db in np.arange(0, 110, 10)], color='white')
-        
+        if title_bar_theme == "darkGlossy":
+            ax.set_yticklabels([str(db) for db in np.arange(0, 110, 10)], color='white')
+        elif title_bar_theme == "lightGlossy": 
+            ax.set_yticklabels([str(db) for db in np.arange(0, 110, 10)], color='black')
+        else:
+            print("application theme not configured, using fallback")
+            ax.set_yticklabels([str(db) for db in np.arange(0, 110, 10)], color='white')            
         ax.grid(True, linestyle='--', alpha=0.6, color='gray')
         
         # Ustawienie kolorów dla ramek i etykiet
-        ax.spines['bottom'].set_color('white')
-        ax.spines['top'].set_color('white')
-        ax.spines['left'].set_color('white')
-        ax.spines['right'].set_color('white')
-        ax.tick_params(axis='x', colors='white')
-        ax.tick_params(axis='y', colors='white')
+        if title_bar_theme == "darkGlossy":
+            ax.spines['bottom'].set_color('white')
+            ax.spines['top'].set_color('white')
+            ax.spines['left'].set_color('white')
+            ax.spines['right'].set_color('white')
+            ax.tick_params(axis='x', colors='white')
+            ax.tick_params(axis='y', colors='white')
+        elif title_bar_theme == "lightGlossy":
+            ax.spines['bottom'].set_color('black')
+            ax.spines['top'].set_color('black')
+            ax.spines['left'].set_color('black')
+            ax.spines['right'].set_color('black')
+            ax.tick_params(axis='x', colors='black')
+            ax.tick_params(axis='y', colors='black')
+        else:
+            print("application theme not configured, using fallback")
+            ax.spines['bottom'].set_color('white')
+            ax.spines['top'].set_color('white')
+            ax.spines['left'].set_color('white')
+            ax.spines['right'].set_color('white')
+            ax.tick_params(axis='x', colors='white')
+            ax.tick_params(axis='y', colors='white')
 
         self.canvas.draw()
         
